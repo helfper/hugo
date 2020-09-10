@@ -44,7 +44,6 @@ func (t *tocTransformer) Transform(n *ast.Document, reader text.Reader, pc parse
 		toc         tableofcontents.Root
 		header      tableofcontents.Header
 		level       int
-		row         = -1
 		inHeading   bool
 		headingText bytes.Buffer
 	)
@@ -55,7 +54,7 @@ func (t *tocTransformer) Transform(n *ast.Document, reader text.Reader, pc parse
 			if inHeading && !entering {
 				header.Text = headingText.String()
 				headingText.Reset()
-				toc.AddAt(header, row, level-1)
+				toc.AddAt(header, level)
 				header = tableofcontents.Header{}
 				inHeading = false
 				return s, nil
@@ -72,11 +71,6 @@ func (t *tocTransformer) Transform(n *ast.Document, reader text.Reader, pc parse
 		case ast.KindHeading:
 			heading := n.(*ast.Heading)
 			level = heading.Level
-
-			if level == 1 || row == -1 {
-				row++
-			}
-
 			id, found := heading.AttributeString("id")
 			if found {
 				header.ID = string(id.([]byte))

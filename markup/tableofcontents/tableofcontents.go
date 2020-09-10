@@ -17,15 +17,12 @@ import (
 	"strings"
 )
 
-// Headers holds the top level (h1) headers.
-type Headers []Header
-
 // Header holds the data about a header and its children.
 type Header struct {
 	ID   string
 	Text string
 
-	Headers Headers
+	Headers []Header
 }
 
 // IsZero is true when no ID or Text is set.
@@ -33,69 +30,58 @@ func (h Header) IsZero() bool {
 	return h.ID == "" && h.Text == ""
 }
 
-// Root implements AddAt, which can be used to build the
-// data structure for the ToC.
+// Root holds the top level (h1) headers.
 type Root struct {
-	Headers Headers
+	Headers []Header
 }
 
-// AddAt adds the header into the given location.
-func (toc *Root) AddAt(h Header, row, level int) {
-	for i := len(toc.Headers); i <= row; i++ {
-		toc.Headers = append(toc.Headers, Header{})
-	}
-
-	if level == 0 {
-		toc.Headers[row] = h
-		return
-	}
-
-	header := &toc.Headers[row]
-
+// AddAt adds the header into the given level, starting at 1.
+func (toc *Root) AddAt(h Header, level int) {
+	headers := &toc.Headers
 	for i := 1; i < level; i++ {
-		if len(header.Headers) == 0 {
-			header.Headers = append(header.Headers, Header{})
+		if len(*headers) == 0 {
+			*headers = append(*headers, Header{})
 		}
-		header = &header.Headers[len(header.Headers)-1]
+		headers = &(*headers)[len(*headers)-1].Headers
 	}
-	header.Headers = append(header.Headers, h)
+	*headers = append(*headers, h)
 }
 
 // ToHTML renders the ToC as HTML.
 func (toc Root) ToHTML(startLevel, stopLevel int, ordered bool) string {
 	b := &tocBuilder{
 		s:          strings.Builder{},
-		h:          toc.Headers,
+		root:       toc,
 		startLevel: startLevel,
 		stopLevel:  stopLevel,
-		ordered:    ordered,
+		tag:        orderedTag[ordered],
 	}
 	b.Build()
 	return b.s.String()
 }
 
 type tocBuilder struct {
-	s strings.Builder
-	h Headers
+	s    strings.Builder
+	root Root
 
 	startLevel int
 	stopLevel  int
-	ordered    bool
+	tag        string
 }
 
 func (b *tocBuilder) Build() {
-	b.writeNav(b.h)
+	b.writeNav(b.root.Headers)
 }
 
-func (b *tocBuilder) writeNav(h Headers) {
+func (b *tocBuilder) writeNav(hs []Header) {
 	b.s.WriteString("<nav id=\"TableOfContents\">")
-	b.writeHeaders(1, 0, b.h)
+	b.writeHeaders(1, 0, hs)
 	b.s.WriteString("</nav>")
 }
 
-func (b *tocBuilder) writeHeaders(level, indent int, h Headers) {
+func (b *tocBuilder) writeHeaders(level, indent int, hs []Header) {
 	if level < b.startLevel {
-		for _, h := range h {
+		for _, h := range hs {
 			b.writeHeaders(level+1, indent, h.Headers)
 		}
 		return
@@ -105,29 +91,21 @@ func (b *tocBuilder) writeHeaders(level, indent int, h Headers) {
 		return
 	}
 
-	hasChildren := len(h) > 0
+	hasChildren := len(hs) > 0
 
 	if hasChildren {
 		b.s.WriteString("\n")
 		b.indent(indent + 1)
-		if b.ordered {
-			b.s.WriteString("<ol>\n")
-		} else {
-			b.s.WriteString("<ul>\n")
-		}
+		b.s.WriteString("<" + b.tag + ">\n")
 	}
 
-	for _, h := range h {
+	for _, h := range hs {
 		b.writeHeader(level+1, indent+2, h)
 	}
 
 	if hasChildren {
 		b.indent(indent + 1)
-		if b.ordered {
-			b.s.WriteString("</ol>")
-		} else {
-			b.s.WriteString("</ul>")
-		}
+		b.s.WriteString("</" + b.tag + ">")
 		b.s.WriteString("\n")
 		b.indent(indent)
 	}
@@ -149,6 +127,8 @@ func (b *tocBuilder) indent(n int) {
 	}
 }
 
+var orderedTag = map[bool]string{true: "ol", false: "ul"}
+
 // DefaultConfig is the default ToC configuration.
 var DefaultConfig = Config{
 	StartLevel: 2,
@@ -156,6 +136,7 @@ var DefaultConfig = Config{
 	Ordered:    false,
 }
 
+// Config holds ToC configuration.
 type Config struct {
 	// Heading start level to include in the table of contents, starting
 	// at h1 (inclusive).

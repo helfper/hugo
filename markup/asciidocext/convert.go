@@ -257,17 +257,13 @@ func (a *asciidocConverter) extractTOC(src []byte) ([]byte, tableofcontents.Root
 func parseTOC(doc *html.Node) tableofcontents.Root {
 	var (
 		toc tableofcontents.Root
-		f   func(*html.Node, int, int)
+		f   func(*html.Node, int)
 	)
-	f = func(n *html.Node, row, level int) {
+	f = func(n *html.Node, level int) {
 		if n.Type == html.ElementNode {
 			switch n.Data {
 			case "ul":
-				if level == 0 {
-					row++
-				}
-				level++
-				f(n.FirstChild, row, level)
+				f(n.FirstChild, level+1)
 			case "li":
 				for c := n.FirstChild; c != nil; c = c.NextSibling {
 					if c.Type != html.ElementNode || c.Data != "a" {
@@ -277,16 +273,16 @@ func parseTOC(doc *html.Node) tableofcontents.Root {
 					toc.AddAt(tableofcontents.Header{
 						Text: nodeContent(c),
 						ID:   href,
-					}, row, level)
+					}, level)
 				}
-				f(n.FirstChild, row, level)
+				f(n.FirstChild, level)
 			}
 		}
 		if n.NextSibling != nil {
-			f(n.NextSibling, row, level)
+			f(n.NextSibling, level)
 		}
 	}
-	f(doc.FirstChild, -1, 0)
+	f(doc.FirstChild, 1)
 	return toc
 }
 

@@ -24,11 +24,11 @@ func TestToc(t *testing.T) {
 
 	toc := &Root{}
 
-	toc.AddAt(Header{Text: "Header 1", ID: "h1-1"}, 0, 0)
-	toc.AddAt(Header{Text: "1-H2-1", ID: "1-h2-1"}, 0, 1)
-	toc.AddAt(Header{Text: "1-H2-2", ID: "1-h2-2"}, 0, 1)
-	toc.AddAt(Header{Text: "1-H3-1", ID: "1-h2-2"}, 0, 2)
-	toc.AddAt(Header{Text: "Header 2", ID: "h1-2"}, 1, 0)
+	toc.AddAt(Header{Text: "Header 1", ID: "h1-1"}, 1)
+	toc.AddAt(Header{Text: "1-H2-1", ID: "1-h2-1"}, 2)
+	toc.AddAt(Header{Text: "1-H2-2", ID: "1-h2-2"}, 2)
+	toc.AddAt(Header{Text: "1-H3-1", ID: "1-h2-2"}, 3)
+	toc.AddAt(Header{Text: "Header 2", ID: "h1-2"}, 1)
 
 	got := toc.ToHTML(1, -1, false)
 	c.Assert(got, qt.Equals, `<nav id="TableOfContents">
@@ -99,21 +99,16 @@ func TestTocMissingParent(t *testing.T) {
 
 	toc := &Root{}
 
-	toc.AddAt(Header{Text: "H2", ID: "h2"}, 0, 1)
-	toc.AddAt(Header{Text: "H3", ID: "h3"}, 1, 2)
-	toc.AddAt(Header{Text: "H3", ID: "h3"}, 1, 2)
+	toc.AddAt(Header{Text: "H2", ID: "h2"}, 2)
+	toc.AddAt(Header{Text: "H3", ID: "h3"}, 3)
+	toc.AddAt(Header{Text: "H3", ID: "h3"}, 3)
 
 	got := toc.ToHTML(1, -1, false)
 	c.Assert(got, qt.Equals, `<nav id="TableOfContents">
   <ul>
     <li>
       <ul>
-        <li><a href="#h2">H2</a></li>
-      </ul>
-    </li>
-    <li>
-      <ul>
-        <li>
+        <li><a href="#h2">H2</a>
           <ul>
             <li><a href="#h3">H3</a></li>
             <li><a href="#h3">H3</a></li>
@@ -137,12 +132,7 @@ func TestTocMissingParent(t *testing.T) {
   <ol>
     <li>
       <ol>
-        <li><a href="#h2">H2</a></li>
-      </ol>
-    </li>
-    <li>
-      <ol>
-        <li>
+        <li><a href="#h2">H2</a>
           <ol>
             <li><a href="#h3">H3</a></li>
             <li><a href="#h3">H3</a></li>
